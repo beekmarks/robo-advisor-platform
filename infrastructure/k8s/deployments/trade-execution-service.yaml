@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trade-execution-service
+  namespace: robo-advisor
+  labels:
+    app: trade-execution-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trade-execution-service
+  template:
+    metadata:
+      labels:
+        app: trade-execution-service
+    spec:
+      containers:
+      - name: trade-execution-service
+        image: trade-execution-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8086
+        envFrom:
+        - configMapRef:
+            name: app-config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8086
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trade-execution-service
+  namespace: robo-advisor
+spec:
+  selector:
+    app: trade-execution-service
+  ports:
+  - port: 8086
+    targetPort: 8086
+  type: ClusterIP

@@ -1,0 +1,26 @@
+flowchart LR
+  FE[Frontend]
+  US[user-service]
+  MD[market-data-service]
+  PF[portfolio-service]
+  RB[rebalancing-service]
+  LLM[llm-service]
+  TX[trade-execution-service]
+  PG[(PostgreSQL)]
+  RD[(Redis)]
+
+  FE --> US
+  FE --> MD
+  FE --> PF
+  FE --> RB
+  FE --> LLM
+  FE --> TX
+
+  RB --> MD
+  RB --> TX
+
+  US --> PG
+  PF --> PG
+  LLM --> RD
+  TX --> RD
+  MD --> RD

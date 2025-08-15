@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: market-data-service
+  namespace: robo-advisor
+  labels:
+    app: market-data-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: market-data-service
+  template:
+    metadata:
+      labels:
+        app: market-data-service
+    spec:
+      containers:
+      - name: market-data-service
+        image: market-data-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8082
+        envFrom:
+        - configMapRef:
+            name: app-config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8082
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: market-data-service
+  namespace: robo-advisor
+spec:
+  selector:
+    app: market-data-service
+  ports:
+  - port: 8082
+    targetPort: 8082
+  type: ClusterIP

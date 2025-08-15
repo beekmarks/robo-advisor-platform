@@ -1,0 +1,16 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: delay-market-data
+  namespace: robo-advisor
+spec:
+  action: delay
+  mode: all
+  selector:
+    labelSelectors:
+      app: market-data-service
+  delay:
+    latency: '500ms'
+    correlation: '25'
+    jitter: '200ms'
+  duration: '120s'

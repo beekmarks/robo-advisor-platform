@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-service
+  namespace: robo-advisor
+  labels:
+    app: llm-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: llm-service
+  template:
+    metadata:
+      labels:
+        app: llm-service
+    spec:
+      containers:
+      - name: llm-service
+        image: llm-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8085
+        envFrom:
+        - configMapRef:
+            name: app-config
+        - secretRef:
+            name: app-secrets
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8085
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8085
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-service
+  namespace: robo-advisor
+spec:
+  selector:
+    app: llm-service
+  ports:
+  - port: 8085
+    targetPort: 8085
+  type: ClusterIP

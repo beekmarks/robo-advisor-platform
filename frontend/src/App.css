@@ -1,0 +1,120 @@
+.App {
+  text-align: center;
+}
+
+.app-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  margin-bottom: 20px;
+}
+
+.app-header h1 {
+  margin: 0 0 10px 0;
+  font-size: 2rem;
+}
+
+.services-status {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.status-indicator {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.status-indicator.healthy {
+  background-color: #28a745;
+  color: white;
+}
+
+.status-indicator.unhealthy {
+  background-color: #ffc107;
+  color: black;
+}
+
+.status-indicator.unreachable {
+  background-color: #dc3545;
+  color: white;
+}
+
+.navigation {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 30px;
+  padding: 20px;
+  border-top: 1px solid #ddd;
+}
+
+.navigation .btn.active {
+  background-color: #28a745;
+}
+
+.test-section {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.test-section h3 {
+  margin-top: 0;
+  color: #333;
+}
+
+.services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 15px;
+}
+
+.service-card {
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.service-card.healthy {
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+}
+
+.service-card.unhealthy {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+}
+
+.service-card.unreachable {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+.service-card h4 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+}
+
+.service-card .status {
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+
+.service-card .status.healthy {
+  color: #155724;
+}
+
+.service-card .status.unhealthy {
+  color: #856404;
+}
+
+.service-card .status.unreachable {
+  color: #721c24;
+}

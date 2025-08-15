@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  # Database Services
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: roboadvisor
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d roboadvisor"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--stop-writes-on-bgsave-error", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Backend Services
+  user-service:
+    build: ./services/user-service
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/roboadvisor
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your-jwt-secret-key
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  market-data-service:
+    build: ./services/market-data-service
+    ports:
+      - "8082:8082"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  llm-service:
+    build: ./services/llm-service
+    ports:
+      - "8085:8085"
+    env_file:
+      - .env
+    environment:
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1-aws}
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  portfolio-service:
+    build: ./services/portfolio-service
+    ports:
+      - "8083:8083"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/roboadvisor
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  trade-execution-service:
+    build: ./services/trade-execution-service
+    ports:
+      - "8086:8086"
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres:5432/roboadvisor
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  rebalancing-service:
+    build: ./services/rebalancing-service
+    ports:
+      - "8084:8084"
+    environment:
+      - MARKET_DATA_URL=http://market-data-service:8082
+      - TRADE_EXECUTION_URL=http://trade-execution-service:8086
+    depends_on:
+      market-data-service:
+        condition: service_started
+      trade-execution-service:
+        condition: service_started
+      redis:
+        condition: service_healthy
+
+  # Frontend Service
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8080
+    depends_on:
+      - user-service
+      - portfolio-service
+      - llm-service
+      - trade-execution-service
+      - rebalancing-service
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

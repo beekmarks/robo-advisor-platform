@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rebalancing-service
+  namespace: robo-advisor
+  labels:
+    app: rebalancing-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rebalancing-service
+  template:
+    metadata:
+      labels:
+        app: rebalancing-service
+    spec:
+      containers:
+      - name: rebalancing-service
+        image: rebalancing-service:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8084
+        env:
+        - name: MARKET_DATA_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: MARKET_DATA_URL
+        - name: TRADE_EXECUTION_URL
+          valueFrom:
+            configMapKeyRef:
+              name: app-config
+              key: TRADE_EXECUTION_URL
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 10
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8084
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rebalancing-service
+  namespace: robo-advisor
+spec:
+  selector:
+    app: rebalancing-service
+  ports:
+  - port: 8084
+    targetPort: 8084
+  type: ClusterIP

@@ -1,0 +1,15 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: StressChaos
+metadata:
+  name: stress-llm
+  namespace: robo-advisor
+spec:
+  mode: one
+  selector:
+    labelSelectors:
+      app: llm-service
+  stressors:
+    cpu:
+      workers: 2
+      load: 80
+  duration: '120s'

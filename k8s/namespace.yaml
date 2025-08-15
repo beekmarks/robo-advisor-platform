@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: robo-advisor
+  labels:
+    name: robo-advisor
+    environment: production
+    project: tech-safari-2k25
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: robo-advisor-quota
+  namespace: robo-advisor
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    persistentvolumeclaims: "10"
+    services: "20"
+    secrets: "20"
+    configmaps: "20"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: robo-advisor-limits
+  namespace: robo-advisor
+spec:
+  limits:
+  - default:
+      cpu: 500m
+      memory: 512Mi
+    defaultRequest:
+      cpu: 100m
+      memory: 128Mi
+    type: Container
