@@ -1,4 +1,4 @@
-# Contributing to Tech Safari 2K25 Robo-Advisor
+# Contributing to Robo-Advisor
 
 Thanks for helping improve the project! This short guide covers how to run locally and basic commit conventions. For architecture and deployment, see `README.md` and `docs/deployment.md`.
 

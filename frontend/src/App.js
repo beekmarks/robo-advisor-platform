@@ -48,7 +48,7 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1>🤖 Tech Safari 2K25 Robo-Advisor</h1>
+  <h1>🤖 Robo-Advisor</h1>
         <div className="services-status">
           {Object.entries(servicesStatus).map(([service, status]) => (
             <span key={service} className={`status-indicator ${status}`}>

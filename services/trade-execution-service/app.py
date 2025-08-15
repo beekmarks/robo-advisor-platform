@@ -1,5 +1,5 @@
 """
-Trade Execution Service for Tech Safari 2K25 Robo-Advisor Platform
+Trade Execution Service for Robo-Advisor Platform
 Handles order management, execution, and trade settlement with paper trading support
 """
 

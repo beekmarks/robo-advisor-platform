@@ -1,5 +1,5 @@
 """
-Simplified LLM Service for Tech Safari 2K25 Robo-Advisor Platform
+Simplified LLM Service for Robo-Advisor Platform
 Mock implementation for real-world testing
 """
 

@@ -1,5 +1,5 @@
 """
-User Service for Tech Safari 2K25 Robo-Advisor Platform
+User Service for Robo-Advisor Platform
 Handles authentication, user management, and security
 """
 

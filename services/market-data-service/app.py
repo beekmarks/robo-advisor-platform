@@ -1,5 +1,5 @@
 """
-Market Data Service for Tech Safari 2K25 Robo-Advisor Platform
+Market Data Service for Robo-Advisor Platform
 Real-time and historical market data aggregation
 """
 

@@ -1,5 +1,5 @@
 """
-LLM Service for Tech Safari 2K25 Robo-Advisor Platform
+LLM Service for Robo-Advisor Platform
 Provides conversational AI with preference extraction (simplified version)
 """
 

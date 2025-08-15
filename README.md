@@ -1,6 +1,6 @@
-# Tech Safari 2K25 Robo-Advisor Platform
+# Robo-Advisor Platform
 
-An AI-powered, cloud-ready robo-advisor built as a teaching/reference app for TechSafari 2K25. It showcases a pragmatic microservices architecture, an LLM-driven onboarding flow, automated portfolio rebalancing, and a simple React UI. Everything runs locally via Docker Compose and is deployable to Kubernetes (manifests included).
+An AI-powered, cloud-ready robo-advisor built as a teaching/reference app. It showcases a pragmatic microservices architecture, an LLM-driven onboarding flow, automated portfolio rebalancing, and a simple React UI. Everything runs locally via Docker Compose and is deployable to Kubernetes (manifests included).
 
 ## Repository contents
 
@@ -196,7 +196,7 @@ Chaos experiments (ready-to-apply manifests):
 - `infrastructure/chaos/delay-market-data.yaml`
 - `infrastructure/chaos/stress-llm.yaml`
 
-## Why this satisfies TechSafari 2K25 goals
+## Why this satisfies project goals
 
 Return on Investment (ROI)
 - Trades execute with realistic prices/fees; rebalancing aligns holdings to targets
@@ -244,4 +244,4 @@ See `CONTRIBUTING.md` for local run steps, coding guidelines, testing, and commi
 - Rebalancing uses `TRADE_EXECUTION_URL` on port 8086 (aligned with docker-compose and K8s config).
 - `smoke-test.sh` is safe to run repeatedly; it prints brief responses for quick validation.
 
-— Built for TechSafari 2K25 —
+— Built for demonstration purposes —

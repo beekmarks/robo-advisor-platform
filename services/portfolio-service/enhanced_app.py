@@ -1,5 +1,5 @@
 """
-Enhanced Portfolio Service for Tech Safari 2K25 Robo-Advisor Platform
+Enhanced Portfolio Service for Robo-Advisor Platform
 Includes tax-loss harvesting, factor-based investing, and advanced portfolio optimization
 """
 
