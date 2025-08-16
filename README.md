@@ -2,7 +2,10 @@
 
 An AI-powered, cloud-ready robo-advisor built as a teaching/reference app. It showcases a pragmatic microservices architecture, an LLM-driven onboarding flow, automated portfolio rebalancing, and a simple React UI. Everything runs locally via Docker Compose and is deployable to Kubernetes (manifests included).
 
-https://github.com/user-attachments/assets/9d7641ce-0f95-4d34-8841-1c5356e2e3e8
+
+https://github.com/user-attachments/assets/efe0f2d1-aaa3-4dc3-8d3f-2919455bc9cc
+
+
 
 ## Repository contents
 
