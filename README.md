@@ -97,6 +97,10 @@ Rendered PNG for slides: `docs/architecture.png` (generated from `docs/architect
 
 See also: `docs/neuro-symbolic.md` for detailed neuro‑symbolic endpoints and run steps.
 
+Neuro‑Symbolic Architecture
+
+![Neuro‑Symbolic Architecture](docs/neuro-symbolic-architecture.png)
+
 
 - Decimal for money math (never float) and 2/4 DP rounding
 - Pydantic models with validation; FastAPI async endpoints

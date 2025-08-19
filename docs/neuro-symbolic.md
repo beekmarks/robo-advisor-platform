@@ -7,6 +7,8 @@ This project includes an optional, additive neuro‑symbolic layer to increase e
 - Verified chat endpoint in LLM service that fuses neural output with KG + Symbolic signals
 - Verified rebalancing endpoint that gates execution on verification/compliance
 
+![Neuro‑Symbolic Architecture](./neuro-symbolic-architecture.png)
+
 ## Services & Ports
 
 - knowledge-graph-service (FastAPI): 8087
