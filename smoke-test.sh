@@ -68,6 +68,9 @@ main() {
   wait_for "llm-service"         "http://localhost:8085/health"
   wait_for "trade-execution"     "http://localhost:8086/health"
   wait_for "rebalancing-service" "http://localhost:8084/health"
+  # New services
+  wait_for "knowledge-graph"     "http://localhost:8087/health" || true
+  wait_for "symbolic-reasoning"  "http://localhost:8088/health" || true
 
   # Exercise key endpoints
   smoke_get  "Market Quote AAPL" "http://localhost:8082/quote/AAPL" || true
@@ -75,6 +78,21 @@ main() {
   smoke_post_json "LLM Chat" "http://localhost:8085/chat" '{"user_id":"smoke-user","message":"I am a moderate risk investor saving for retirement","conversation_history":[]}' || true
 
   smoke_post_json "Trade Execute" "http://localhost:8086/execute" '{"user_id":"smoke-user","portfolio_id":"smoke-portfolio","symbol":"AAPL","side":"buy","quantity":1}' || true
+
+  # Seed knowledge graph with sample data, then test reasoning and compliance
+  smoke_post_json "KG Populate" "http://localhost:8087/graph/populate" '{}' || true
+  smoke_post_json "KG Reasoning" "http://localhost:8087/reasoning/multi-hop" '{"query":"find correlation paths for AAPL","max_hops":3}' || true
+
+  # Verified rebalancing flow
+  smoke_post_json "Rebalancing Verified" "http://localhost:8084/execute-rebalance/verified" '{
+    "portfolio": {
+      "user_id": "smoke-user",
+      "holdings": {"AAPL": 10, "MSFT": 10},
+      "target_allocation": {"AAPL": 0.6, "MSFT": 0.4},
+      "last_rebalanced": "2024-01-01T00:00:00Z"
+    },
+    "trigger_type": "strategic"
+  }' || true
 
   # Rebalancing basic check
   smoke_post_json "Rebalancing Check" "http://localhost:8084/check-rebalance" '{

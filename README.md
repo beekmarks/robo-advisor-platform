@@ -2,6 +2,8 @@
 
 An AI-powered, cloud-ready robo-advisor built as a teaching/reference app. It showcases a pragmatic microservices architecture, an LLM-driven onboarding flow, automated portfolio rebalancing, and a simple React UI. Everything runs locally via Docker Compose and is deployable to Kubernetes (manifests included).
 
+Neuro‑Symbolic extension: adds a Knowledge Graph (Neo4j) and Symbolic Reasoning (Z3) for explainable and verified flows (verified chat and verified rebalancing).
+
 ## Repository contents
 
 Top-level:
@@ -22,6 +24,8 @@ Backend services (FastAPI):
 - `services/rebalancing-service/` (8084) — Rebalance decisions and trade generation
 - `services/llm-service/` (8085) — Conversational onboarding with OpenAI Python v1 client
 - `services/trade-execution-service/` (8086) — Paper trading engine, fees/slippage model
+- `services/knowledge-graph-service/` (8087) — Neo4j-backed reasoning and compliance
+- `services/symbolic-reasoning-service/` (8088) — Z3-based portfolio/trade verification
 
 Infrastructure:
 - `k8s/namespace.yaml` — Namespace, quotas, limits
@@ -40,7 +44,9 @@ Services and ports (as in docker-compose):
 - rebalancing-service: 8084
 - llm-service: 8085
 - trade-execution-service: 8086
-- Datastores: Postgres 5432, Redis 6379
+- knowledge-graph-service: 8087
+- symbolic-reasoning-service: 8088
+- Datastores: Postgres 5432, Redis 6379, Neo4j 7474/7687
 
 Key interactions:
 - Frontend calls each service directly from the browser (CORS enabled where needed)
@@ -48,7 +54,7 @@ Key interactions:
 - LLM-service processes onboarding chat and extracts user preferences
 
 Design choices:
-### Diagram
+### Diagram (with Neuro‑Symbolic)
 
 ```mermaid
 flowchart LR
@@ -59,8 +65,11 @@ flowchart LR
     RB[rebalancing-service]
     LLM[llm-service]
     TX[trade-execution-service]
+    KG[knowledge-graph-service]
+    SYM[symbolic-reasoning-service]
     PG[(PostgreSQL)]
     RD[(Redis)]
+    NEO[(Neo4j)]
 
     FE --> US
     FE --> MD
@@ -68,18 +77,25 @@ flowchart LR
     FE --> RB
     FE --> LLM
     FE --> TX
+    FE --> KG
 
     RB --> MD
     RB --> TX
+    RB --> KG
 
     US --> PG
     PF --> PG
     LLM --> RD
+    LLM --> KG
+    LLM --> SYM
     TX --> RD
     MD --> RD
+    KG --> NEO
 ```
 
 Rendered PNG for slides: `docs/architecture.png` (generated from `docs/architecture.mmd`).
+
+See also: `docs/neuro-symbolic.md` for detailed neuro‑symbolic endpoints and run steps.
 
 
 - Decimal for money math (never float) and 2/4 DP rounding
@@ -107,7 +123,22 @@ Market Data Service (8082)
 
 LLM Service (8085)
 - OpenAI Python v1 client with timeouts and mock fallback
-- Chat endpoint `/chat` used by the onboarding component
+- Chat endpoints: `/chat` and `/chat/verified` (the latter enriches with KG + Symbolic checks)
+
+Knowledge Graph Service (8087)
+- Neo4j-backed reasoning and compliance checks
+- Endpoints:
+    - `GET /health` (includes `neo4j_connected` flag)
+    - `POST /graph/populate` (seed sample AAPL/MSFT, factors, and regulation)
+    - `POST /reasoning/multi-hop` (simple multi-hop correlation paths)
+    - `POST /compliance/check` (e.g., max single-position limit, optional ESG warnings)
+
+Symbolic Reasoning Service (8088)
+- Z3 SMT solver for formal verification
+- Endpoints:
+    - `POST /verify/portfolio` (sum=1, max single position, min diversification)
+    - `POST /verify/rebalancing` (trades move toward target; no negatives)
+    - `POST /generate/shacl` (sample SHACL constraints)
 
 Portfolio Service (8083)
 - Enhanced portfolio logic stub; CORS enabled where browser access is expected
@@ -119,6 +150,7 @@ User Service (8080)
 
 1) Ensure Docker is running; copy/set your `.env` (OpenAI key recommended for live LLM)
 2) Start everything: `docker-compose up -d`
+    - If Neo4j reports "No space left on device", free Docker space (`docker system prune -af && docker volume prune -f`) and re-run.
 3) Visit the UI: http://localhost:3000
 4) Optional sanity: run `./smoke-test.sh` to open the UI and call health/test endpoints
 
@@ -129,6 +161,13 @@ Service URLs (local):
 - rebalancing: http://localhost:8084/health
 - llm: http://localhost:8085/health
 - trade execution: http://localhost:8086/health
+ - knowledge graph: http://localhost:8087/health
+ - symbolic reasoning: http://localhost:8088/health
+
+Neuro‑Symbolic quickstart:
+- Check KG: `curl -sS http://localhost:8087/health` (wait for `neo4j_connected: true`)
+- Seed KG: `curl -sS -H 'Content-Type: application/json' -d '{}' http://localhost:8087/graph/populate`
+- Try reasoning: `curl -sS -H 'Content-Type: application/json' -d '{"query":"find correlation paths for AAPL"}' http://localhost:8087/reasoning/multi-hop`
 
 ## Try the demo
 
@@ -138,6 +177,8 @@ End-to-end in the UI
 - Dashboard: scroll to the action buttons and click:
     - “🧮 Check Rebalancing” to compute drift and threshold
     - “🔧 Execute Rebalance” to generate and submit orders via trade-execution
+    - “✅ Execute Rebalance (Verified)” to run Z3 verification + KG compliance before execution
+    - “Query KG” to send a multi-hop reasoning query to the KG service
 
 Expected results
 - Check shows fields like: `should_rebalance`, `drift`, `threshold`, and `calendar_trigger`

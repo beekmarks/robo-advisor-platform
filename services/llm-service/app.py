@@ -13,6 +13,7 @@ import redis
 from datetime import datetime
 import asyncio
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 
 # Configure logging
@@ -22,6 +23,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="LLM Service", version="1.0.0")
 
 # Add CORS middleware
+import httpx
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -30,6 +32,63 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class NeuralSymbolicLLM:
+    def __init__(self):
+        self.kg_service = os.getenv("KG_SERVICE_URL", "http://knowledge-graph-service:8087")
+        self.symbolic_service = os.getenv("SYMBOLIC_SERVICE_URL", "http://symbolic-reasoning-service:8088")
+
+    async def process_with_reasoning(self, query: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        llm_response = await llm_service._generate_response(
+            ConversationRequest(user_id=context.get("user_id", "unknown"), message=query),
+            context,
+        )
+
+        entities: List[str] = []
+        kg_data: Dict[str, Any] = {"paths": []}
+        verification: Dict[str, Any] = {"valid": True}
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                kg_resp = await client.post(
+                    f"{self.kg_service}/reasoning/multi-hop",
+                    json={"query": query, "entities": entities, "max_hops": 3},
+                )
+                if kg_resp.status_code == 200:
+                    kg_data = kg_resp.json()
+            except Exception:
+                kg_data = {"paths": []}
+
+            portfolio_ctx = context.get("portfolio")
+            if portfolio_ctx:
+                try:
+                    vresp = await client.post(
+                        f"{self.symbolic_service}/verify/portfolio",
+                        json={"portfolio": portfolio_ctx},
+                    )
+                    if vresp.status_code == 200:
+                        verification = vresp.json()
+                except Exception:
+                    verification = {"valid": False, "error": "verification_service_unreachable"}
+
+        return {
+            "response": llm_response.get("response") if isinstance(llm_response, dict) else str(llm_response),
+            "reasoning_paths": kg_data.get("paths", []),
+            "verification": verification,
+            "explanation": self.generate_explanation(llm_response, kg_data, verification),
+            "confidence": self.calculate_confidence(verification),
+        }
+
+    def generate_explanation(self, llm: Dict[str, Any], kg: Dict[str, Any], verify: Dict[str, Any]) -> str:
+        intent = llm.get("intent", "General inquiry") if isinstance(llm, dict) else "General inquiry"
+        constraints_ok = "✓ All constraints satisfied" if verify.get("valid") else "⚠ Some constraints need attention"
+        return f"My recommendation is based on: 1) Understanding: {intent} 2) Knowledge paths: {len(kg.get('paths', []))} 3) Verification: {constraints_ok}"
+
+    def calculate_confidence(self, verification: Dict[str, Any]) -> float:
+        base = 0.7
+        if verification.get("valid"):
+            base += 0.2
+        if verification.get("constraints_satisfied"):
+            base += 0.1
+        return min(base, 1.0)
 # Environment configuration
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -453,6 +512,28 @@ async def health_check():
         "openai_configured": bool(OPENAI_API_KEY),
         "redis_connected": redis_connected
     }
+
+
+@app.post("/chat/verified", response_model=ConversationResponse)
+async def chat_with_verification(request: ConversationRequest):
+    nsllm = NeuralSymbolicLLM()
+    context: Dict[str, Any] = {"user_id": request.user_id}
+    # Try load portfolio from Redis if present
+    try:
+        portfolio_data = redis_client.get(f"portfolio:{request.user_id}")
+        if portfolio_data:
+            context["portfolio"] = json.loads(portfolio_data)
+    except Exception:
+        pass
+
+    result = await nsllm.process_with_reasoning(request.message, context)
+    return ConversationResponse(
+        response=result["response"],
+        extracted_preferences=PreferenceExtractionResult(),
+        next_questions=[],
+        conversation_complete=False,
+        explanation=result.get("explanation", ""),
+    )
 
 if __name__ == "__main__":
     import uvicorn

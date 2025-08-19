@@ -311,6 +311,67 @@ async def execute_rebalance(payload: ExecuteRebalanceRequest, background_tasks: 
     }
 
 
+class VerifiedRebalancingEngine(RebalancingEngine):
+    async def execute_with_verification(self, portfolio: Portfolio, market_conditions: Optional[MarketConditions]) -> Dict[str, Any]:
+        trades = await self.generate_trades(portfolio)
+        verify_result: Dict[str, Any]
+        compliance_result: Dict[str, Any]
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            # Symbolic verification
+            try:
+                vresp = await client.post(
+                    "http://symbolic-reasoning-service:8088/verify/rebalancing",
+                    json={
+                        "current": {k: float(v) for k, v in portfolio.holdings.items()},
+                        "target": {k: float(v) for k, v in portfolio.target_allocation.items()},
+                        "trades": [t.dict() for t in trades],
+                    },
+                )
+                verify_result = vresp.json()
+            except Exception as e:
+                verify_result = {"valid": False, "error": "symbolic_service_unreachable", "detail": str(e)}
+
+            # Knowledge graph compliance
+            try:
+                cresp = await client.post(
+                    "http://knowledge-graph-service:8087/compliance/check",
+                    json={
+                        "allocations": {k: float(v) for k, v in portfolio.target_allocation.items()},
+                        "esg_required": False,
+                    },
+                )
+                compliance_result = cresp.json()
+            except Exception as e:
+                compliance_result = {"compliant": False, "violations": [], "warnings": [], "error": "kg_service_unreachable", "detail": str(e)}
+
+        if not verify_result.get("valid") or not compliance_result.get("compliant"):
+            trades = await self._adjust_trades_for_compliance(trades, compliance_result)
+
+        return {
+            "trades": [t.dict() for t in trades],
+            "verification": verify_result,
+            "compliance": compliance_result,
+            "execution_approved": bool(verify_result.get("valid")) and bool(compliance_result.get("compliant")),
+        }
+
+    async def _adjust_trades_for_compliance(self, trades: List[TradeOrder], compliance: Dict[str, Any]) -> List[TradeOrder]:
+        adjusted = list(trades)
+        for violation in compliance.get("violations", []):
+            symbol = violation.get("symbol")
+            limit = float(violation.get("limit", 1.0))
+            for i, t in enumerate(adjusted):
+                if t.symbol == symbol:
+                    adjusted[i].shares = max(Decimal("0"), (t.shares * Decimal(str(limit))).quantize(FOUR_DP))
+        return adjusted
+
+
+@app.post("/execute-rebalance/verified")
+async def execute_verified_rebalance(payload: ExecuteRebalanceRequest) -> Dict[str, Any]:
+    engine_v = VerifiedRebalancingEngine(min_trade_usd=MIN_TRADE_USD)
+    result = await engine_v.execute_with_verification(payload.portfolio, payload.market_conditions)
+    return result
+
+
 @app.get("/")
 async def root() -> Dict[str, str]:
     return {"message": "Rebalancing Service up"}

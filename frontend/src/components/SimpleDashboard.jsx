@@ -1,5 +1,23 @@
 import React, { useState, useEffect, useCallback } from 'react';
 
+const VerificationStatus = ({ verification, compliance }) => (
+  <div style={{
+    padding: '15px',
+    backgroundColor: verification?.valid ? '#e8f5e8' : '#fff3cd',
+    borderRadius: '8px',
+    marginTop: '15px'
+  }}>
+    <h4>Verification Status</h4>
+    <div><strong>Constraints:</strong> {verification?.valid ? 'Satisfied' : 'Violations detected'}</div>
+    <div><strong>Compliance:</strong> {compliance?.compliant ? 'Compliant' : 'Non-compliant'}</div>
+    {compliance?.violations?.map((v, i) => (
+      <div key={i} style={{ color: 'red', marginTop: '5px' }}>
+        {v.regulation}: {v.symbol} exceeds {Math.round(v.limit * 100)}% limit
+      </div>
+    ))}
+  </div>
+);
+
 const SimpleDashboard = ({ preferences, user }) => {
   const [marketData, setMarketData] = useState(null);
   const [portfolioData, setPortfolioData] = useState(null);
@@ -7,6 +25,10 @@ const SimpleDashboard = ({ preferences, user }) => {
   const [rebalanceCheck, setRebalanceCheck] = useState(null);
   const [rebalanceExec, setRebalanceExec] = useState(null);
   const [rebalancingBusy, setRebalancingBusy] = useState(false);
+  const [verification, setVerification] = useState(null);
+  const [compliance, setCompliance] = useState(null);
+  const [kgQuery, setKgQuery] = useState('');
+  const [kgResult, setKgResult] = useState(null);
 
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
@@ -143,6 +165,42 @@ const SimpleDashboard = ({ preferences, user }) => {
     }
   };
 
+  const executeVerifiedRebalancing = async () => {
+    setRebalancingBusy(true);
+    try {
+      const response = await fetch('http://localhost:8084/execute-rebalance/verified', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          portfolio: buildDemoPortfolio(),
+          trigger_type: 'strategic'
+        })
+      });
+      const data = await response.json();
+      setVerification(data.verification || null);
+      setCompliance(data.compliance || null);
+      setRebalanceExec(data);
+    } catch (err) {
+      console.error('Verified rebalance failed', err);
+    } finally {
+      setRebalancingBusy(false);
+    }
+  };
+
+  const queryKnowledgeGraph = async () => {
+    try {
+      const response = await fetch('http://localhost:8087/reasoning/multi-hop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: kgQuery, max_hops: 3 })
+      });
+      const data = await response.json();
+      setKgResult(data);
+    } catch (error) {
+      console.error('KG query failed:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="card">
@@ -244,6 +302,9 @@ const SimpleDashboard = ({ preferences, user }) => {
           <button className="btn" onClick={executeRebalancing} disabled={rebalancingBusy} style={{ backgroundColor: '#17a2b8' }}>
             🔧 Execute Rebalance
           </button>
+          <button className="btn" onClick={executeVerifiedRebalancing} disabled={rebalancingBusy}>
+            ✅ Execute Rebalance (Verified)
+          </button>
         </div>
 
         {(rebalanceCheck || rebalanceExec) && (
@@ -277,6 +338,27 @@ const SimpleDashboard = ({ preferences, user }) => {
             )}
           </div>
         )}
+
+        {(verification || compliance) && (
+          <VerificationStatus verification={verification} compliance={compliance} />
+        )}
+
+        <div style={{ marginTop: 20 }}>
+          <h4>Knowledge Graph Query</h4>
+          <input
+            type="text"
+            placeholder="e.g., find correlation paths for AAPL"
+            value={kgQuery}
+            onChange={(e) => setKgQuery(e.target.value)}
+            style={{ width: '60%', marginRight: 10 }}
+          />
+          <button className="btn" onClick={queryKnowledgeGraph}>Query KG</button>
+          {kgResult && (
+            <pre style={{ marginTop: 10, background: '#f6f8fa', padding: 10 }}>
+              {JSON.stringify(kgResult, null, 2)}
+            </pre>
+          )}
+        </div>
       </div>
     </div>
   );

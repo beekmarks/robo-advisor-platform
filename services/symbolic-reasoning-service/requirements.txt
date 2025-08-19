@@ -1,0 +1,4 @@
+fastapi>=0.111
+uvicorn[standard]>=0.30
+z3-solver>=4.13
+pydantic>=2.7
